@@ -1,3 +1,4 @@
+#include <cstddef>
 #include "etiss/IntegratedLibrary/QVanillaAccelerator.h"
 #include "etiss/CPUArch.h"
 #include <stdio.h>
@@ -239,8 +240,10 @@ void QVanillaAccelerator::write32(uint64_t addr, int32_t val)
     uint64_t offset = addr - 0x70000000;
     *(int32_t*)((intptr_t)&regIf + offset) = val;
 
+
     // std::cout << "adr = " << addr << std::endl;
     // std::cout << "val = " << val << std::endl;
+
 
     if (offset == 0x00000030) {     //if (regIf.control == 0x00000001)
 
@@ -251,7 +254,6 @@ void QVanillaAccelerator::write32(uint64_t addr, int32_t val)
         size_t filterSize = regIf.kw * regIf.kh * regIf.ic * regIf.oc * sizeof(int8_t);
         size_t biasSize = regIf.oc * sizeof(int32_t);
         size_t resultSize = regIf.iw * regIf.ih * regIf.oc * sizeof(int32_t);
-
 
         uint8_t* input_buffer = (uint8_t*)malloc(inputSize);
         uint8_t* filter_buffer = (uint8_t*)malloc(filterSize);
@@ -275,7 +277,7 @@ std::endl;
 regIf.oc, regIf.iw, regIf.ih, regIf.ic, regIf.kh, regIf.kw, regIf.i_zp, regIf.k_zp);
 
         // copy from own result buffer to etiss memory
-        plugin_system_->dwrite(plugin_system_->handle, plugin_cpu_, regIf.result, result_buffer, resultSize);
+        plugin_system_->dwrite(plugin_system_->handle, plugin_cpu_, p_regs->result, result_buffer, resultSize);
 
         // std::cout << "completed!  " << std::endl;
         //free the allocated space
@@ -288,10 +290,13 @@ regIf.oc, regIf.iw, regIf.ih, regIf.ic, regIf.kh, regIf.kw, regIf.i_zp, regIf.k_
 }
 
 
-int32_t QVanillaAccelerator::read32(uint64_t addr)
+uint32_t QVanillaAccelerator::read32(uint64_t addr)
 {
-    uint64_t offset = addr - 0x70000000;
-    int32_t val = *(int32*)((intptr_t)&regIf + offset);
+
+    uint64_t offset = addr - base_addr; 
+    size_t reg_index = offset/sizeof(uint32_t);
+    uint32_t val = regIf.arr[reg_index];
+
     // std::cout << "read" << std::endl;
     // std::cout << "adr = " << addr << std::endl;
     // std::cout << "val = " << val << std::endl;

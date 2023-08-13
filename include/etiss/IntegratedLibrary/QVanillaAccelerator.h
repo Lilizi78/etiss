@@ -19,6 +19,7 @@ namespace plugin
 {
 class QVanillaAccelerator: public etiss::plugin::MemMappedPeriph, public etiss::CoroutinePlugin
 {
+    
 public:
     void write32(uint64_t addr, int32_t val);
     int32_t read32(uint64_t addr);
@@ -31,6 +32,7 @@ public:
         mm.size = 0x34;
         return mm;
     }
+
 
 private:
     struct RegIF
