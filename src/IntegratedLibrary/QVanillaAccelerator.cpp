@@ -66,7 +66,7 @@ etiss::int32 QVanillaAccelerator::execute()
             std::cout << "Copying ifmap failed!" << std::endl;
 
         // Delay between data read and start of computation
-        usleep(10);
+        usleep(1000000);
 
         status = plugin_system_->dread(plugin_system_->handle, plugin_cpu_, regIf.weights, filter_buffer, filterSize);
         if (status != 0)
@@ -77,10 +77,15 @@ etiss::int32 QVanillaAccelerator::execute()
             std::cout << "Copying bias failed!" << std::endl;
 
         // Delay between data read and computation
-        usleep(10);
+        usleep(1000000);
 
+        std::cout << "cpuTime_ps before convolution: " << ((ETISS_CPU *)plugin_cpu_)->cpuTime_ps << std::endl;
         conv2dnchw((int8_t *)input_buffer, (int8_t *)filter_buffer, (int32_t *)bias_buffer, (int32_t *)result_buffer,
                    regIf.oc, regIf.iw, regIf.ih, regIf.ic, regIf.kh, regIf.kw, regIf.i_zp, regIf.k_zp);
+          // Let's simulate the convolution taking 1000ps
+        ((ETISS_CPU *)plugin_cpu_)->cpuTime_ps += 1000;
+        std::cout << "Added a delay of 1000ps to simulate convolution computation time." << std::endl;
+        std::cout << "cpuTime_ps after convolution: " << ((ETISS_CPU *)plugin_cpu_)->cpuTime_ps << std::endl;
 
         //etiss::uint64 end_cycles = ((ETISS_CPU *)plugin_cpu_)->cpuTime_ps / ((ETISS_CPU *)plugin_cpu_)->cpuCycleTime_ps;
         //std::cout << "Cycles at the end of convolution: " << end_cycles << std::endl;
@@ -95,7 +100,7 @@ etiss::int32 QVanillaAccelerator::execute()
             cycle_difference * ((ETISS_CPU *)plugin_cpu_)->cpuCycleTime_ps * 1e-12; // converting picoseconds to seconds
         std::cout << "Time taken for convolution (seconds): " << convolution_time_seconds << std::endl;
         
-        //std::cout << "嘿嘿咱们先不看这个cpuCycleTime_ps at end of convolution: " << ((ETISS_CPU *)plugin_cpu_)->cpuCycleTime_ps<< std::endl;
+        //std::cout << "cpuCycleTime_ps at end of convolution: " << ((ETISS_CPU *)plugin_cpu_)->cpuCycleTime_ps<< std::endl;
         //std::cout << "cpuTime_ps after convolution: " << ((ETISS_CPU *)plugin_cpu_)->cpuTime_ps<< std::endl; // Print cpuTime_ps after convolution
         // Delay after computation and before data write
         usleep(10);
