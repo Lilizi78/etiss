@@ -25,30 +25,19 @@ void QVanillaAccelerator::write32(uint64_t addr, int32_t val)
     uint64_t offset = addr - 0x70000000;
     *(int32_t *)((intptr_t)&regIf + offset) = val;
 
-    if (offset == 0x00000030)
-    { // Assuming the offset for the control register is 0x00000030 for demonstration purposes
-        if (val == 1)
-        {
-            old_cycles_ = ((ETISS_CPU *)plugin_cpu_)->cpuTime_ps /
-                          ((ETISS_CPU *)plugin_cpu_)->cpuCycleTime_ps; // Record the cycles when computation starts
+    if (offset == 0x00000030 && val == 1)
+    {   
+        //old_cycles_ = ((ETISS_CPU *)plugin_cpu_)->cpuTime_ps /
+                          //((ETISS_CPU *)plugin_cpu_)->cpuCycleTime_ps; // Record the cycles when computation starts
             std::cout << "Computation initiation signaled." << std::endl;
-            std::cout << "Cycles at the Begin of convolution:"
-                      << ((ETISS_CPU *)plugin_cpu_)->cpuTime_ps / ((ETISS_CPU *)plugin_cpu_)->cpuCycleTime_ps
-                      << std::endl;
-        }
-    }
-}
-etiss::int32 QVanillaAccelerator::execute()
-{
-    // If control register is set to 1, start the convolution computation
-    if (regIf.control == 0x00000001)
-    {
-        // start_time_ = ((ETISS_CPU *)plugin_cpu_)->cpuTime_ps;  // Record the start time of the convolution
-
-        std::cout << "Starting convolution computation." << std::endl;
-        //std::cout << "cpuCycleTime_ps at start: " << ((ETISS_CPU *)plugin_cpu_)->cpuCycleTime_ps << std::endl;
-        //std::cout << "cpuTime_ps before convolution: " << ((ETISS_CPU *)plugin_cpu_)->cpuTime_ps<< std::endl; // Print cpuTime_ps before convolution
-
+            //std::cout << "Cycles at the Begin of convolution:"
+                      //<< ((ETISS_CPU *)plugin_cpu_)->cpuTime_ps / ((ETISS_CPU *)plugin_cpu_)->cpuCycleTime_ps
+                      //<< std::endl;
+        start_time_ = ((ETISS_CPU *)plugin_cpu_)->cpuTime_ps;
+        std::cout << "Starting convolution computation from write32 function." << std::endl;
+        std::cout << "cpuTime_ps before convolution: " << ((ETISS_CPU *)plugin_cpu_)->cpuTime_ps << std::endl;
+        
+        // conv2D Calculation
         size_t inputSize = regIf.iw * regIf.ih * regIf.ic * sizeof(int8_t);
         size_t filterSize = regIf.kw * regIf.kh * regIf.ic * regIf.oc * sizeof(int8_t);
         size_t biasSize = regIf.oc * sizeof(int32_t);
@@ -66,7 +55,7 @@ etiss::int32 QVanillaAccelerator::execute()
             std::cout << "Copying ifmap failed!" << std::endl;
 
         // Delay between data read and start of computation
-        usleep(1000000);
+        //usleep(1000000);
 
         status = plugin_system_->dread(plugin_system_->handle, plugin_cpu_, regIf.weights, filter_buffer, filterSize);
         if (status != 0)
@@ -77,49 +66,55 @@ etiss::int32 QVanillaAccelerator::execute()
             std::cout << "Copying bias failed!" << std::endl;
 
         // Delay between data read and computation
-        usleep(1000000);
+        //usleep(1000000);
 
-        std::cout << "cpuTime_ps before convolution: " << ((ETISS_CPU *)plugin_cpu_)->cpuTime_ps << std::endl;
+        //std::cout << "cpuTime_ps before convolution: " << ((ETISS_CPU *)plugin_cpu_)->cpuTime_ps << std::endl;
         conv2dnchw((int8_t *)input_buffer, (int8_t *)filter_buffer, (int32_t *)bias_buffer, (int32_t *)result_buffer,
                    regIf.oc, regIf.iw, regIf.ih, regIf.ic, regIf.kh, regIf.kw, regIf.i_zp, regIf.k_zp);
-          // Let's simulate the convolution taking 1000ps
-        ((ETISS_CPU *)plugin_cpu_)->cpuTime_ps += 1000;
-        std::cout << "Added a delay of 1000ps to simulate convolution computation time." << std::endl;
+          // Let's simulate the convolution taking 62500ps
+        ((ETISS_CPU *)plugin_cpu_)->cpuTime_ps += 62500;
+        std::cout << "Added a delay of 62500ps to simulate convolution computation time." << std::endl;
         std::cout << "cpuTime_ps after convolution: " << ((ETISS_CPU *)plugin_cpu_)->cpuTime_ps << std::endl;
 
         //etiss::uint64 end_cycles = ((ETISS_CPU *)plugin_cpu_)->cpuTime_ps / ((ETISS_CPU *)plugin_cpu_)->cpuCycleTime_ps;
         //std::cout << "Cycles at the end of convolution: " << end_cycles << std::endl;
         // Record the cycles after the convolution computation is completed
-        etiss::uint64 end_cycles = ((ETISS_CPU *)plugin_cpu_)->cpuTime_ps / ((ETISS_CPU *)plugin_cpu_)->cpuCycleTime_ps;
-        etiss::uint64 cycle_difference = end_cycles - old_cycles_;
-        std::cout << "Cycles at the end of convolution: " << end_cycles << std::endl;
-        std::cout << "Difference in cycles (end - start): " << cycle_difference << std::endl;
+        //etiss::uint64 end_cycles = ((ETISS_CPU *)plugin_cpu_)->cpuTime_ps / ((ETISS_CPU *)plugin_cpu_)->cpuCycleTime_ps;
+        //etiss::uint64 cycle_difference = end_cycles - old_cycles_;
+        //std::cout << "Cycles at the end of convolution: " << end_cycles << std::endl;
+        //std::cout << "Difference in cycles (end - start): " << cycle_difference << std::endl;
 
         // Calculate the time taken for the convolution based on the cycle difference
-        double convolution_time_seconds =
-            cycle_difference * ((ETISS_CPU *)plugin_cpu_)->cpuCycleTime_ps * 1e-12; // converting picoseconds to seconds
-        std::cout << "Time taken for convolution (seconds): " << convolution_time_seconds << std::endl;
+        //double convolution_time_seconds =
+        //    cycle_difference * ((ETISS_CPU *)plugin_cpu_)->cpuCycleTime_ps * 1e-12; // converting picoseconds to seconds
+        //std::cout << "Time taken for convolution (seconds): " << convolution_time_seconds << std::endl;
         
         //std::cout << "cpuCycleTime_ps at end of convolution: " << ((ETISS_CPU *)plugin_cpu_)->cpuCycleTime_ps<< std::endl;
         //std::cout << "cpuTime_ps after convolution: " << ((ETISS_CPU *)plugin_cpu_)->cpuTime_ps<< std::endl; // Print cpuTime_ps after convolution
         // Delay after computation and before data write
-        usleep(10);
+        //usleep(10);
 
         plugin_system_->dwrite(plugin_system_->handle, plugin_cpu_, regIf.result, result_buffer, resultSize);
         std::cout << "Writing to result buffer done." << std::endl;
+        std::cout << "Convolution computation from write32 function finished." << std::endl;
+        std::cout << "cpuTime_ps after convolution: " << ((ETISS_CPU *)plugin_cpu_)->cpuTime_ps << std::endl;
 
-        // Explicitly set control register to 0 after computation
-        regIf.control = 0;
+        // set regIf.control == 0，ensure the conv2D not take place again
+        //regIf.control = 0;
         std::cout << "Computation completed, control register reset to 0." << std::endl;
-
         free(input_buffer);
         free(filter_buffer);
         free(bias_buffer);
         free(result_buffer);
     }
+}
+
+etiss::int32 QVanillaAccelerator::execute()
+{
+    //std::cout << "cpuTime_ps during execute: " << ((ETISS_CPU *)plugin_cpu_)->cpuTime_ps << std::endl;
 
     etiss::uint64 time_elapsed = ((ETISS_CPU *)plugin_cpu_)->cpuTime_ps - start_time_;
-
+    //put if function just check the start time and put a print
     // Check for timer interruption using the elapsed time
     if (time_elapsed >= target_time && regIf.status != 1)
     {
@@ -130,6 +125,8 @@ etiss::int32 QVanillaAccelerator::execute()
 
     return 0; // Assuming a default return value of 0 for successful execution
 }
+
+
 
 etiss::int32 QVanillaAccelerator::executionEnd()
 {
