@@ -9,7 +9,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <iostream> // Included for printing
-
+#include "etiss/IntegratedLibrary/MemMappedPeriph.h"
 namespace etiss
 {
 
@@ -24,7 +24,13 @@ void QVanillaAccelerator::write32(uint64_t addr, int32_t val)
 {
     uint64_t offset = addr - 0x70000000;
     *(int32_t *)((intptr_t)&regIf + offset) = val;
-
+     std::cout << "adr = " << addr << std::endl;
+     std::cout << "val = " << val << std::endl;
+       if (firstWriteCall)  // Add this block
+    {
+        std::cout << "cpuTime_ps during the first call to write32: " << ((ETISS_CPU *)plugin_cpu_)->cpuTime_ps << std::endl;
+        firstWriteCall = false;
+    }
     if (offset == 0x00000030 && val == 1)
     {   
         //old_cycles_ = ((ETISS_CPU *)plugin_cpu_)->cpuTime_ps /
@@ -34,6 +40,7 @@ void QVanillaAccelerator::write32(uint64_t addr, int32_t val)
                       //<< ((ETISS_CPU *)plugin_cpu_)->cpuTime_ps / ((ETISS_CPU *)plugin_cpu_)->cpuCycleTime_ps
                       //<< std::endl;
         start_time_ = ((ETISS_CPU *)plugin_cpu_)->cpuTime_ps;
+        std::cout << "Value of start_time_ " << start_time_<< std::endl;
         std::cout << "Starting convolution computation from write32 function." << std::endl;
         std::cout << "cpuTime_ps before convolution: " << ((ETISS_CPU *)plugin_cpu_)->cpuTime_ps << std::endl;
         
@@ -112,12 +119,16 @@ void QVanillaAccelerator::write32(uint64_t addr, int32_t val)
 etiss::int32 QVanillaAccelerator::execute()
 {
     //std::cout << "cpuTime_ps during execute: " << ((ETISS_CPU *)plugin_cpu_)->cpuTime_ps << std::endl;
-
+     
     etiss::uint64 time_elapsed = ((ETISS_CPU *)plugin_cpu_)->cpuTime_ps - start_time_;
+   
     //put if function just check the start time and put a print
     // Check for timer interruption using the elapsed time
     if (time_elapsed >= target_time && regIf.status != 1)
     {
+         // Print the value of time_elapsed
+        std::cout << "Value of time_elapsed: " << time_elapsed << std::endl;
+         std::cout << "Value of start_time_ " << start_time_<< std::endl;
         regIf.status = 1;
         std::cout << "Timer interruption triggered after ensuring result buffer write is done. Status set to 1."
                   << std::endl;

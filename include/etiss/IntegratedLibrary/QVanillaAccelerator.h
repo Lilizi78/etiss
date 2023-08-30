@@ -23,6 +23,8 @@ class QVanillaAccelerator: public etiss::plugin::MemMappedPeriph, public etiss::
 public:
     void write32(uint64_t addr, int32_t val);
     int32_t read32(uint64_t addr);
+    bool firstWriteCall = true;  // Add this line
+    
     etiss::int32 execute();
     etiss::int32 executionEnd();
     
@@ -55,14 +57,14 @@ private:
 
     RegIF regIf;
     etiss::uint64 old_cycles_ = 0;
-    etiss::uint64 target_time = 1000000; // 
+    etiss::uint64 target_time = 62500; // 
 
     // Newly added variables for tracking convolution computation
     bool isComputing = false;            // To track if convolution computation is ongoing
     etiss::uint64 startCycles = 0;       // To record the cycles at the start of computation
     etiss::int64 post_computation_cycles = 0;
     etiss::uint64 start_time_;
-     etiss::uint64 time_elapsed;
+    etiss::uint64 time_elapsed;
 protected:
     std::string _getPluginName() const;
 };
