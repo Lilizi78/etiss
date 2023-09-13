@@ -1,5 +1,8 @@
 #include "etiss/IntegratedLibrary/MemMappedPeriph.h"
-
+#include <stdlib.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdbool.h>
 #ifndef ETISS_PLUGIN_QVANILLAACCELERATOR_H
 #define ETISS_PLUGIN_QVANILLAACCELERATOR_H
 
@@ -21,7 +24,7 @@ class QVanillaAccelerator: public etiss::plugin::MemMappedPeriph, public etiss::
         MappedMemory getMappedMem() const {
             MappedMemory mm;
             mm.base = 0x70000000;
-            mm.size = 0x34;
+            mm.size = 0x38;
             return mm;
         }
 
@@ -45,12 +48,14 @@ class QVanillaAccelerator: public etiss::plugin::MemMappedPeriph, public etiss::
         };
 
         RegIF regIf;
-        etiss::uint64 target_time =62500; 
-        etiss::uint64 start_time_ = 0;
+        static const int64_t cycles_per_mac = 2.36; 
+        etiss::uint64 target_time ; 
+        etiss::uint64 start_time_ ;
+        int64_t num_macs = 0; 
         bool myflag = false;
         bool myflag2 = false;
         int64_t count = 0;
-        
+        int32_t computation_status = 0; 
     protected:
         std::string _getPluginName() const;
 
