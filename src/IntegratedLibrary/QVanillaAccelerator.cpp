@@ -1,8 +1,5 @@
 #include "etiss/IntegratedLibrary/QVanillaAccelerator.h"
-#include <stdlib.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdbool.h>
+
 namespace etiss
 {
 
@@ -12,7 +9,6 @@ namespace plugin
 int conv2dnchw(int8_t* q_vanilla_accelerator_0_i0, int8_t* q_vanilla_accelerator_0_i1, int32_t* bias_data, int32_t* compute,
               int32_t oc, int32_t iw, int32_t ih, int32_t ic, int32_t kh, int32_t kw, int32_t i_zp, int32_t k_zp);
 
-
 void QVanillaAccelerator::write32(uint64_t addr, int32_t val)
 {
     uint64_t offset = addr - 0x70000000; 
@@ -20,7 +16,9 @@ void QVanillaAccelerator::write32(uint64_t addr, int32_t val)
 
     // std::cout << "adr = " << addr << std::endl;
     // std::cout << "val = " << val << std::endl;
-    // std::cout << "pre time= " << plugin_cpu_->cpuTime_ps << std::endl;
+    // std::cout << "cpu cycle= " << (plugin_cpu_->cpuTime_ps)/(plugin_cpu_->cpuCycleTime_ps) << std::endl;
+    // std::cout << "count in the wr =  " << count << std::endl;
+
 
     if (offset == 0x00000030 && val ==1) {     //if (regIf.control == 0x00000001)
 
@@ -28,18 +26,15 @@ void QVanillaAccelerator::write32(uint64_t addr, int32_t val)
         
         myflag = true;
         start_time_ = plugin_cpu_->cpuTime_ps;
-        std::cout << "Convolution starts at CPU time: " << plugin_cpu_->cpuTime_ps << " ps" << std::endl;
-        //std::cout << "start time= " << start_time_ << std::endl;
-        // Calculate the number of MACs for the convolution operation
-        int64_t num_macs = (int64_t)regIf.oc * regIf.iw * regIf.ih * regIf.ic * regIf.kh * regIf.kw;
-        std::cout << "Number of MACs: " << num_macs << std::endl;
-        target_time = num_macs * cycles_per_mac;
-        std::cout << "Target time: " << target_time << " cycles" << std::endl;
+        // std::cout << "start time= " << start_time_ << std::endl;
 
-        // Assuming cycle_per_mac is known (either as a constant or as a variable)
-        // Calculate the target time in ps (pico-seconds)
-        //target_time = num_macs * cycle_per_mac;  // You will need to define cycle_per_mac somewhere
+        int64_t num_macs = regIf.oc * regIf.iw * regIf.ih * regIf.ic * regIf.kh * regIf.kw;
+        // std::cout << "Number of MACs: " << num_macs << std::endl;
+        target_cycles = num_macs * cycles_per_mac;
+        // std::cout << "Target time: " << target_cycles << " cycles" << std::endl;
 
+        regIf.status = 0;
+        
         // copy memory from etiss buffer to own buffer
         size_t inputSize = regIf.iw * regIf.ih * regIf.ic * sizeof(int8_t);
         size_t filterSize = regIf.kw * regIf.kh * regIf.ic * regIf.oc * sizeof(int8_t);  
@@ -73,11 +68,11 @@ void QVanillaAccelerator::write32(uint64_t addr, int32_t val)
         // copy from own result buffer to etiss memory
         plugin_system_->dwrite(plugin_system_->handle, plugin_cpu_, regIf.result, result_buffer, resultSize);
 
-        //std::cout << "end time= " << plugin_cpu_->cpuTime_ps << std::endl;
+        // std::cout << "end time= " << plugin_cpu_->cpuTime_ps << std::endl;
 
         
 
-         std::cout << "completed!  " << std::endl;
+        // std::cout << "count in the conv =  " << count << std::endl;
         //free the allocated space
         free(input_buffer);
         free(filter_buffer);
@@ -85,45 +80,61 @@ void QVanillaAccelerator::write32(uint64_t addr, int32_t val)
         free(result_buffer);
         myflag2 = true;
         
-        
     }
 }
 
 etiss::int32 QVanillaAccelerator::execute()
 {
-    etiss::uint64 time_elapsed = ((ETISS_CPU *)plugin_cpu_)->cpuTime_ps - start_time_;
-    etiss::uint64 time_elapsed_cycles = time_elapsed / ((ETISS_CPU *)plugin_cpu_)->cpuCycleTime_ps;
+  
+  etiss::uint64 time_elapsed;
 
-    count = count + 1;
+  time_elapsed = ((ETISS_CPU *)plugin_cpu_)->cpuTime_ps - start_time_;
+  etiss::uint64 time_elapsed_cycles = time_elapsed / ((ETISS_CPU *)plugin_cpu_)->cpuCycleTime_ps;
 
-    if (myflag == true) 
-    {
-        // This block will only be entered once after each convolution start
-        if (time_elapsed_cycles >= target_time) 
-        {   
-            std::cout << "cpuCycleTime_ps: "<<((ETISS_CPU *)plugin_cpu_)->cpuCycleTime_ps << std::endl;
-            std::cout << "Target time: " << target_time << " cycles" << std::endl;
-            std::cout << "time_elapsed_cycles: " << time_elapsed_cycles<< " cycles" << std::endl;
-            regIf.status = 1;  // set status register to 1
+  
+  // count = count + 1;
 
-            // Resetting the flag for the next convolution computation
-            myflag = false;
-        }
-    }
+  if (myflag == true) {
+    
+    // std::cout << "first execute after conv start"<< std::endl;
+    // std::cout << "count = " << count << std::endl;
+    // std::cout << "time_elapsed = " << time_elapsed << std::endl;
+    
 
-    return 0;
+    if (time_elapsed_cycles >= target_cycles) {
+      // std::cout << "count = " << count << std::endl;
+      // std::cout << "status: completed" << std::endl;
+      // std::cout << "time_elapsed_cycles = " << time_elapsed_cycles << std::endl;
+      regIf.status = 1;
+      plugin_cpu_->cpuTime_ps = plugin_cpu_->cpuTime_ps + time_elapsed;
+      myflag = false;
+  }
+
+  }
+
+  
+
+
+
+  // std::cout << "count = " << count << std::endl;
+  // std::cout << plugin_cpu_->cpuTime_ps << std::endl;
+
+  return 0;
+
 }
-
 
 
 int32_t QVanillaAccelerator::read32(uint64_t addr)
 {
     uint64_t offset = addr - 0x70000000;
     int32_t val = *(int32*)((intptr_t)&regIf + offset);
-    //std::cout << "Read function reached. Address: " << std::hex << addr << ", Value: " << val << std::endl;  // see the value of adress and val
+    // std::cout << "read" << std::endl;
+    // std::cout << "count in the read =  " << count << std::endl;
+
+    // std::cout << "adr = " << addr << std::endl;
+    // std::cout << "val = " << val << std::endl;
     return val;
 }
-
 
 std::string QVanillaAccelerator::_getPluginName() const 
 { 
@@ -206,7 +217,8 @@ int conv2dnchw(int8_t* q_vanilla_accelerator_0_i0, int8_t* q_vanilla_accelerator
 } // namespace etiss
 
 
-/*“here is the original code”#include "etiss/IntegratedLibrary/QVanillaAccelerator.h"
+/*“here is the original code”
+#include "etiss/IntegratedLibrary/QVanillaAccelerator.h"
 
 namespace etiss
 {
@@ -366,8 +378,7 @@ padded_iw)) + (kh_ * padded_iw)) + ow) + kw_)] * (compute_let)[((((oc_ * ic * kh
 } // namespace plugin
 
 } // namespace etiss
-
-源代码老代码到此为止*/
+original code 到此为止*/
 // #include <cstddef>
 // #include "etiss/IntegratedLibrary/QVanillaAccelerator.h"
 
