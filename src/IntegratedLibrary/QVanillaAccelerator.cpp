@@ -78,7 +78,7 @@ void QVanillaAccelerator::write32(uint64_t addr, int32_t val)
         free(filter_buffer);
         free(bias_buffer);
         free(result_buffer);
-        myflag2 = true;
+        
         
     }
 }
@@ -89,7 +89,7 @@ etiss::int32 QVanillaAccelerator::execute()
   etiss::uint64 time_elapsed;
 
   time_elapsed = ((ETISS_CPU *)plugin_cpu_)->cpuTime_ps - start_time_;
-  etiss::uint64 time_elapsed_cycles = time_elapsed / ((ETISS_CPU *)plugin_cpu_)->cpuCycleTime_ps;
+  //etiss::uint64 elapsed_cycles = time_elapsed / ((ETISS_CPU *)plugin_cpu_)->cpuCycleTime_ps;
 
   
   // count = count + 1;
@@ -99,9 +99,9 @@ etiss::int32 QVanillaAccelerator::execute()
     // std::cout << "first execute after conv start"<< std::endl;
     // std::cout << "count = " << count << std::endl;
     // std::cout << "time_elapsed = " << time_elapsed << std::endl;
-    
+    etiss::uint64 elapsed_cycles = time_elapsed / ((ETISS_CPU *)plugin_cpu_)->cpuCycleTime_ps;
 
-    if (time_elapsed_cycles >= target_cycles) {
+    if (elapsed_cycles >= target_cycles) {
       // std::cout << "count = " << count << std::endl;
       // std::cout << "status: completed" << std::endl;
       // std::cout << "time_elapsed_cycles = " << time_elapsed_cycles << std::endl;

@@ -45,11 +45,11 @@ class QVanillaAccelerator: public etiss::plugin::MemMappedPeriph, public etiss::
         };
 
         RegIF regIf;
-        static const int64_t cycles_per_mac = 4; 
+        static const int64_t cycles_per_mac = 0.5; 
         etiss::uint64 target_cycles; 
         etiss::uint64 start_time_ = 0;
         bool myflag = false;
-        bool myflag2 = false;
+        
         int64_t count = 0;
         
     protected:
