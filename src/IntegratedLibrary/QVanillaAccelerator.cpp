@@ -106,7 +106,7 @@ etiss::int32 QVanillaAccelerator::execute()
       // std::cout << "status: completed" << std::endl;
       // std::cout << "time_elapsed_cycles = " << time_elapsed_cycles << std::endl;
       regIf.status = 1;
-      plugin_cpu_->cpuTime_ps = plugin_cpu_->cpuTime_ps + time_elapsed;
+      //plugin_cpu_->cpuTime_ps = plugin_cpu_->cpuTime_ps + time_elapsed;
       myflag = false;
   }
 
